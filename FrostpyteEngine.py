@@ -37,7 +37,7 @@ class GrObject:
 
 # Sprite Class
 class Sprite:
-	def __init__(self, sprite, position_x, position_y, orientation = "down", float_position = 32, speed = 2, refresh_freq = 0.125, refresh_count = 0, move_buffer = []):
+	def __init__(self, sprite, position_x, position_y, orientation = "down", float_position = 32, speed = 2, refresh_freq = 0.125, refresh_count = 0, move_buffer = [], sprite_height = 64):
 		self.sprite = sprite
 		self.position_x = position_x
 		self.position_y = position_y
@@ -47,6 +47,45 @@ class Sprite:
 		self.refresh_freq = refresh_freq
 		self.refresh_count = refresh_count
 		self.move_buffer = move_buffer
+		sprite_conv = pygame.image.load(sprite + "/up.png").convert()
+		self.sprite_height = sprite_conv.get_height()
+		
+	def draw(self):
+		if (self.float_position >= 32 and self.move_buffer != []):
+			self.move(self.move_buffer[0])
+			self.move_buffer.remove(self.move_buffer[0])
+		if (self.float_position < 32):
+			if (self.orientation == "down"):
+				pos_x = self.position_x * 32
+				pos_y = self.position_y * 32 - 32 + self.float_position - (64 - self.sprite_height)
+			elif (self.orientation == "up"):
+				pos_x = self.position_x * 32
+				pos_y = self.position_y * 32 + 32 - self.float_position - (64 - self.sprite_height)
+			elif (self.orientation == "left"):
+				pos_x = self.position_x * 32 + 32 - self.float_position
+				pos_y = self.position_y * 32 - (64 - self.sprite_height)
+			elif (self.orientation == "right"):
+				pos_x = self.position_x * 32 - 32 + self.float_position
+				pos_y = self.position_y * 32 - (64 - self.sprite_height)
+			
+			if (self.refresh_count <= 1):
+				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + ".png"), (pos_x, pos_y))
+				self.refresh_count += self.refresh_freq
+			elif (self.refresh_count <= 2):
+				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + "_m1.png"), (pos_x, pos_y))
+				self.refresh_count += self.refresh_freq
+			elif (self.refresh_count <= 3):
+				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + ".png"), (pos_x, pos_y))
+				self.refresh_count += self.refresh_freq
+			elif (self.refresh_count <= 4):
+				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + "_m2.png"), (pos_x, pos_y))
+				self.refresh_count += self.refresh_freq
+			else:
+				self.refresh_count = 0
+			
+			self.float_position += 1 * self.speed
+		else:
+			window.blit(pygame.image.load(self.sprite + "/" + self.orientation + ".png"), (self.position_x * 32, self.position_y * 32 - (64 - self.sprite_height)))
 
 	def move(self, direction):
 		can_go = True
@@ -99,11 +138,11 @@ class Tileset:
 		self.rect_x2 = rect_x2
 		self.rect_y2 = rect_y2
 		self.layer = layer
-		self.can_cross = True
+		self.can_cross = can_cross
 
 # Player class
 class Player:
-	def __init__(self, name, sprite, position_x, position_y, orientation = "down", float_position = 32, speed = 2.5, refresh_freq = 0.125, refresh_count = 0):
+	def __init__(self, name, sprite, position_x, position_y, orientation = "down", float_position = 32, speed = 2, refresh_freq = 0.125, refresh_count = 0, sprite_height = 64):
 		self.name = name
 		self.sprite = sprite
 		self.position_x = position_x
@@ -113,6 +152,7 @@ class Player:
 		self.speed = speed
 		self.refresh_freq = refresh_freq
 		self.refresh_count = refresh_count
+		self.sprite_height = sprite_height
 
 # Drawing function
 def drawObject(grobj):
@@ -147,7 +187,7 @@ def getObjects(x, y):
 			
 
 # Initial function
-def init(x, y, player, title, icon, frame_rate, debug):
+def init(x, y, player, title, icon, frame_rate):
 	global window
 	
 	global objects_list
@@ -161,9 +201,6 @@ def init(x, y, player, title, icon, frame_rate, debug):
 
 	global FPS
 	FPS = frame_rate
-
-	global Debug
-	Debug = debug
 	
 	pygame.init()
 	window = pygame.display.set_mode((x, y))
@@ -171,6 +208,9 @@ def init(x, y, player, title, icon, frame_rate, debug):
 	pygame.display.set_icon(pygame.image.load(icon))
 	pygame.key.set_repeat(1,1)
 	pygame.display.flip()
+
+	sprite_conv = pygame.image.load(MainPlayer.sprite + "/up.png").convert()
+	MainPlayer.sprite_height = sprite_conv.get_height()
 	
 # Main function/class
 class MainRun(Thread):
@@ -179,6 +219,9 @@ class MainRun(Thread):
 
 	def run(self):
 		keep = 1
+		global spriteTopBuffer
+		spriteTopBuffer = []
+		
 		while keep: # Main while
 			pygame.time.Clock().tick(FPS)
 			can_go = True
@@ -253,58 +296,25 @@ class MainRun(Thread):
 
 			# Sprites
 			for spr in sprites_list:
-
-				if (spr.float_position >= 32 and spr.move_buffer != []):
-					spr.move(spr.move_buffer[0])
-					spr.move_buffer.remove(spr.move_buffer[0])
-				if (spr.float_position < 32):
-					if (spr.orientation == "down"):
-						pos_x = spr.position_x * 32
-						pos_y = spr.position_y * 32 - 32 + spr.float_position - 32
-					elif (spr.orientation == "up"):
-						pos_x = spr.position_x * 32
-						pos_y = spr.position_y * 32 + 32 - spr.float_position - 32
-					elif (spr.orientation == "left"):
-						pos_x = spr.position_x * 32 + 32 - spr.float_position
-						pos_y = spr.position_y * 32 - 32
-					elif (spr.orientation == "right"):
-						pos_x = spr.position_x * 32 - 32 + spr.float_position
-						pos_y = spr.position_y * 32 - 32
-				
-					if (spr.refresh_count <= 1):
-						window.blit(pygame.image.load(spr.sprite + "/" + spr.orientation + ".png"), (pos_x, pos_y))
-						spr.refresh_count += spr.refresh_freq
-					elif (spr.refresh_count <= 2):
-						window.blit(pygame.image.load(spr.sprite + "/" + spr.orientation + "_m1.png"), (pos_x, pos_y))
-						spr.refresh_count += spr.refresh_freq
-					elif (spr.refresh_count <= 3):
-						window.blit(pygame.image.load(spr.sprite + "/" + spr.orientation + ".png"), (pos_x, pos_y))
-						spr.refresh_count += spr.refresh_freq
-					elif (spr.refresh_count <= 4):
-						window.blit(pygame.image.load(spr.sprite + "/" + spr.orientation + "_m2.png"), (pos_x, pos_y))
-						spr.refresh_count += spr.refresh_freq
-					else:
-						spr.refresh_count = 0
-					
-					spr.float_position += 1 * spr.speed
+				if not(getDistance(spr, MainPlayer) <= 2 and spr.position_y > MainPlayer.position_y):
+					spr.draw()
 				else:
-					window.blit(pygame.image.load(spr.sprite + "/" + spr.orientation + ".png"), (spr.position_x * 32, spr.position_y * 32 - 32))
-
+					spriteTopBuffer.append(spr)
 
 			# Main player
 			if (MainPlayer.float_position < 32):
 				if (MainPlayer.orientation == "down"):
 					pos_x = MainPlayer.position_x * 32
-					pos_y = MainPlayer.position_y * 32 - 32 + MainPlayer.float_position - (64 - 47)
+					pos_y = MainPlayer.position_y * 32 - 32 + MainPlayer.float_position - (64 - MainPlayer.sprite_height)
 				elif (MainPlayer.orientation == "up"):
 					pos_x = MainPlayer.position_x * 32
-					pos_y = MainPlayer.position_y * 32 + 32 - MainPlayer.float_position - (64 - 47)
+					pos_y = MainPlayer.position_y * 32 + 32 - MainPlayer.float_position - (64 - MainPlayer.sprite_height)
 				elif (MainPlayer.orientation == "left"):
 					pos_x = MainPlayer.position_x * 32 + 32 - MainPlayer.float_position
-					pos_y = MainPlayer.position_y * 32 - (64 - 47)
+					pos_y = MainPlayer.position_y * 32 - (64 - MainPlayer.sprite_height)
 				elif (MainPlayer.orientation == "right"):
 					pos_x = MainPlayer.position_x * 32 - 32 + MainPlayer.float_position
-					pos_y = MainPlayer.position_y * 32 - (64 - 47)
+					pos_y = MainPlayer.position_y * 32 - (64 - MainPlayer.sprite_height)
 				
 				if (MainPlayer.refresh_count <= 1):
 					window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + ".png"), (pos_x, pos_y))
@@ -323,22 +333,24 @@ class MainRun(Thread):
 					
 				MainPlayer.float_position += 1 * MainPlayer.speed
 			else:
-				window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + ".png"), (MainPlayer.position_x * 32, MainPlayer.position_y * 32 - (64 - 47)))
+				window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + ".png"), (MainPlayer.position_x * 32, MainPlayer.position_y * 32 - (64 - MainPlayer.sprite_height)))
 
-			if (Debug == True):
+			# Top sprite
+			for spri in spriteTopBuffer:
+				spri.draw()
+				spriteTopBuffer.remove(spri)
+
+			# Last layer (on top)
+			for obj in objects_list[len(objects_list) - 1]:
+				window.blit(obj.image, (obj.position_x * 32, obj.position_y * 32))
+
+			# Debug
+			if (debug_draw_hitbox == True):
 				for x in range(MainPlayer.position_x * frame_size, (MainPlayer.position_x + 1) * frame_size, 4):
 					pygame.draw.line(window, (255, 0, 0), (x, MainPlayer.position_y * frame_size), (x, (MainPlayer.position_y + 1) * frame_size), 1)
 				for y in range(MainPlayer.position_y * frame_size, (MainPlayer.position_y + 1) * frame_size, 4):
 					pygame.draw.line(window, (255, 0, 0), (MainPlayer.position_x * frame_size, y), ((MainPlayer.position_x + 1) * frame_size, y), 1)
-			
-			# Last layer (on top)
-			for obj in objects_list[len(objects_list) - 1]:
-					window.blit(obj.image, (obj.position_x * 32, obj.position_y * 32))
-
-
-			# Debug
-
-			if (Debug == True):
+			if (debug_draw_frame == True):	
 				for x in range(0, nbr_frame_x * frame_size, frame_size):
 					pygame.draw.line(window, (255, 255, 255), (x, 0), (x, nbr_frame_y * frame_size), 1)
 				for y in range(0, nbr_frame_y * frame_size, frame_size):

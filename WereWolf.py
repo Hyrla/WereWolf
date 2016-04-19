@@ -3,7 +3,7 @@
 import FrostpyteEngine as fpe
 from Constantes import *
 
-fpe.init(frame_size * nbr_frame_x, frame_size * nbr_frame_y, fpe.Player("Gauthier", "./Sprites/Characters/Pirate", 0, 1), window_name, window_icon, frame_rate, debug)
+fpe.init(frame_size * nbr_frame_x, frame_size * nbr_frame_y, fpe.Player("Gauthier", "./Sprites/Characters/Pirate", 0, 2), window_name, window_icon, frame_rate)
 
 main_thread = fpe.MainRun()
 main_thread.start()
