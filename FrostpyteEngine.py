@@ -13,7 +13,7 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
 #	Created by	:																	#
 #		ALESSANDRI Julien															#
-#		DÉCHIRON Alice																#
+#		HEISS Gauthier																#
 #																					#
 #	Version :  Alpha 0.1 - April, 13th 2016											#
 #																					#
@@ -25,10 +25,16 @@ from pygame.locals import *
 from math import sqrt
 from Constantes import *
 
+# Camera
+class Camera:
+	def __init__(self, position_x = 0, position_y = 0):
+		self.position_x = position_x
+		self.position_y = position_y
+
 # Graphical Object Class
 class GrObject:
 	def __init__(self, image, position_x, position_y, layer, can_cross = True, must_refresh = True):
-		self.image = image
+		self.image = pygame.image.load(image)
 		self.position_x = position_x
 		self.position_y = position_y
 		self.layer = layer
@@ -69,23 +75,23 @@ class Sprite:
 				pos_y = self.position_y * 32 - (64 - self.sprite_height)
 			
 			if (self.refresh_count <= 1):
-				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + ".png"), (pos_x, pos_y))
+				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + ".png"), (pos_x + cam.position_x, pos_y + cam.position_y))
 				self.refresh_count += self.refresh_freq
 			elif (self.refresh_count <= 2):
-				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + "_m1.png"), (pos_x, pos_y))
+				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + "_m1.png"), (pos_x + cam.position_x, pos_y + cam.position_y))
 				self.refresh_count += self.refresh_freq
 			elif (self.refresh_count <= 3):
-				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + ".png"), (pos_x, pos_y))
+				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + ".png"), (pos_x + cam.position_x, pos_y + cam.position_y))
 				self.refresh_count += self.refresh_freq
 			elif (self.refresh_count <= 4):
-				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + "_m2.png"), (pos_x, pos_y))
+				window.blit(pygame.image.load(self.sprite + "/" + self.orientation + "_m2.png"), (pos_x + cam.position_x, pos_y + cam.position_y))
 				self.refresh_count += self.refresh_freq
 			else:
 				self.refresh_count = 0
 			
 			self.float_position += 1 * self.speed
 		else:
-			window.blit(pygame.image.load(self.sprite + "/" + self.orientation + ".png"), (self.position_x * 32, self.position_y * 32 - (64 - self.sprite_height)))
+			window.blit(pygame.image.load(self.sprite + "/" + self.orientation + ".png"), (self.position_x * 32 + cam.position_x, self.position_y * 32 - (64 - self.sprite_height) + cam.position_y))
 
 	def move(self, direction):
 		can_go = True
@@ -132,7 +138,7 @@ class Sprite:
 # Tileset Class
 class Tileset:
 	def __init__(self, image, rect_x1, rect_y1, rect_x2, rect_y2, layer = 0, can_cross = True):
-		self.image = image
+		self.image = image + "/image.png"
 		self.rect_x1 = rect_x1
 		self.rect_y1 = rect_y1
 		self.rect_x2 = rect_x2
@@ -166,7 +172,7 @@ def drawSprite(spr):
 def drawTileset(tiles):
 	for xi in range(tiles.rect_x1, tiles.rect_x2):
 		for yi in range (tiles.rect_y1, tiles.rect_y2):
-			objects_list[tiles.layer].append(GrObject(tiles.image + "/image.png", xi, yi, tiles.layer, tiles.can_cross, True))
+			objects_list[tiles.layer].append(GrObject(tiles.image, xi, yi, tiles.layer, tiles.can_cross, True))
 
 # Get distance function
 def getDistance(spr1, spr2):
@@ -201,6 +207,9 @@ def init(x, y, player, title, icon, frame_rate):
 
 	global FPS
 	FPS = frame_rate
+
+	global cam
+	cam = Camera()
 	
 	pygame.init()
 	window = pygame.display.set_mode((x, y))
@@ -221,6 +230,8 @@ class MainRun(Thread):
 		keep = 1
 		global spriteTopBuffer
 		spriteTopBuffer = []
+		global debug_draw_position_refresh
+		debug_draw_position_refresh = True
 		
 		while keep: # Main while
 			pygame.time.Clock().tick(FPS)
@@ -244,6 +255,7 @@ class MainRun(Thread):
 							if (can_go == True):
 								MainPlayer.float_position = 0
 								MainPlayer.position_x += 1
+								debug_draw_position_refresh = True
 							
 					elif event.key == K_LEFT:
 						for obj in getObjects(MainPlayer.position_x - 1, MainPlayer.position_y):
@@ -254,6 +266,7 @@ class MainRun(Thread):
 							if (can_go == True):
 								MainPlayer.float_position = 0
 								MainPlayer.position_x -= 1
+								debug_draw_position_refresh = True
 								
 					elif event.key == K_UP:
 						for obj in getObjects(MainPlayer.position_x, MainPlayer.position_y - 1):
@@ -264,6 +277,7 @@ class MainRun(Thread):
 							if (can_go == True):
 								MainPlayer.float_position = 0
 								MainPlayer.position_y -= 1
+								debug_draw_position_refresh = True
 								
 					elif event.key == K_DOWN:
 						for obj in getObjects(MainPlayer.position_x, MainPlayer.position_y + 1):
@@ -274,25 +288,28 @@ class MainRun(Thread):
 							if (can_go == True):
 								MainPlayer.float_position = 0
 								MainPlayer.position_y += 1
+								debug_draw_position_refresh = True
 		
 			#----------------#
 			#	 OBJECTS	 #
 			#----------------#
 			#window.fill((0,0,0)) # Clear Screen
 
-
 			# First layers
 			for lay in range(0, len(objects_list) - 2):
 				for obj in objects_list[lay]:
 					if (obj.must_refresh == True):
-						window.blit(pygame.image.load(obj.image), (obj.position_x * 32, obj.position_y * 32))
+						window.blit(obj.image, (obj.position_x * 32 + cam.position_x, obj.position_y * 32 + cam.position_y))
 						obj.must_refresh = False
-					elif (getDistance(obj, MainPlayer) < 4): #and MainPlayer.float_position <= 32):
-						window.blit(pygame.image.load(obj.image), (obj.position_x * 32, obj.position_y * 32))
+					elif (getDistance(obj, MainPlayer) < 16): #and MainPlayer.float_position <= 32):
+						window.blit(obj.image, (obj.position_x * 32 + cam.position_x, obj.position_y * 32 + cam.position_y))
 					else:
 						for spri in sprites_list:
-							if (getDistance(spri, obj) < 4): #and spri.float_position <= 32):
-								window.blit(pygame.image.load(obj.image), (obj.position_x * 32, obj.position_y * 32))
+							if (getDistance(spri, obj) < 3): #and spri.float_position <= 32):
+								window.blit(obj.image, (obj.position_x * 32 + cam.position_x, obj.position_y * 32 + cam.position_y))
+					if (debug_draw_position == True and debug_draw_position_refresh == True):
+						if (obj.position_x + cam.position_x <= 5 or obj.position_y + cam.position_y <= 1):
+							window.blit(obj.image, (obj.position_x * 32 + cam.position_x, obj.position_y * 32 + cam.position_y))
 
 			# Sprites
 			for spr in sprites_list:
@@ -306,34 +323,49 @@ class MainRun(Thread):
 				if (MainPlayer.orientation == "down"):
 					pos_x = MainPlayer.position_x * 32
 					pos_y = MainPlayer.position_y * 32 - 32 + MainPlayer.float_position - (64 - MainPlayer.sprite_height)
+					cam.position_y -= MainPlayer.speed
 				elif (MainPlayer.orientation == "up"):
 					pos_x = MainPlayer.position_x * 32
 					pos_y = MainPlayer.position_y * 32 + 32 - MainPlayer.float_position - (64 - MainPlayer.sprite_height)
+					cam.position_y += MainPlayer.speed
 				elif (MainPlayer.orientation == "left"):
 					pos_x = MainPlayer.position_x * 32 + 32 - MainPlayer.float_position
 					pos_y = MainPlayer.position_y * 32 - (64 - MainPlayer.sprite_height)
+					cam.position_x += MainPlayer.speed
 				elif (MainPlayer.orientation == "right"):
 					pos_x = MainPlayer.position_x * 32 - 32 + MainPlayer.float_position
 					pos_y = MainPlayer.position_y * 32 - (64 - MainPlayer.sprite_height)
-				
+					cam.position_x -= MainPlayer.speed
+
+				"""
+				if ((frame_size * pos_x) - cam.position_x > frame_size * nbr_frame_x):
+					cam.position_x += 1
+				if ((frame_size * pos_x) + cam.position_x > frame_size * nbr_frame_x):
+					cam.position_x -= 1
+				if ((frame_size * pos_y) - cam.position_y > frame_size * nbr_frame_y):
+					cam.position_y += 1
+				if ((frame_size * pos_y) + cam.position_y > frame_size * nbr_frame_y):
+					cam.position_y -= 1
+				"""
+			
 				if (MainPlayer.refresh_count <= 1):
-					window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + ".png"), (pos_x, pos_y))
+					window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + ".png"), (pos_x + cam.position_x, pos_y + cam.position_y))
 					MainPlayer.refresh_count += MainPlayer.refresh_freq
 				elif (MainPlayer.refresh_count <= 2):
-					window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + "_m1.png"), (pos_x, pos_y))
+					window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + "_m1.png"), (pos_x + cam.position_x, pos_y + cam.position_y))
 					MainPlayer.refresh_count += MainPlayer.refresh_freq
 				elif (MainPlayer.refresh_count <= 3):
-					window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + ".png"), (pos_x, pos_y))
+					window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + ".png"), (pos_x + cam.position_x, pos_y + cam.position_y))
 					MainPlayer.refresh_count += MainPlayer.refresh_freq
 				elif (MainPlayer.refresh_count <= 4):
-					window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + "_m2.png"), (pos_x, pos_y))
+					window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + "_m2.png"), (pos_x + cam.position_x, pos_y + cam.position_y))
 					MainPlayer.refresh_count += MainPlayer.refresh_freq
 				else:
 					MainPlayer.refresh_count = 0
 					
 				MainPlayer.float_position += 1 * MainPlayer.speed
 			else:
-				window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + ".png"), (MainPlayer.position_x * 32, MainPlayer.position_y * 32 - (64 - MainPlayer.sprite_height)))
+				window.blit(pygame.image.load(MainPlayer.sprite + "/" + MainPlayer.orientation + ".png"), (MainPlayer.position_x * 32 + cam.position_x, MainPlayer.position_y * 32 - (64 - MainPlayer.sprite_height) + cam.position_y))
 
 			# Top sprite
 			for spri in spriteTopBuffer:
@@ -342,18 +374,26 @@ class MainRun(Thread):
 
 			# Last layer (on top)
 			for obj in objects_list[len(objects_list) - 1]:
-				window.blit(obj.image, (obj.position_x * 32, obj.position_y * 32))
+				window.blit(obj.image, (obj.position_x * 32 + cam.position_x, obj.position_y * 32 + cam.position_y))
 
 			# Debug
 			if (debug_draw_hitbox == True):
-				for x in range(MainPlayer.position_x * frame_size, (MainPlayer.position_x + 1) * frame_size, 4):
-					pygame.draw.line(window, (255, 0, 0), (x, MainPlayer.position_y * frame_size), (x, (MainPlayer.position_y + 1) * frame_size), 1)
-				for y in range(MainPlayer.position_y * frame_size, (MainPlayer.position_y + 1) * frame_size, 4):
-					pygame.draw.line(window, (255, 0, 0), (MainPlayer.position_x * frame_size, y), ((MainPlayer.position_x + 1) * frame_size, y), 1)
+				for x in range(MainPlayer.position_x * frame_size, (MainPlayer.position_x + 1) * frame_size + 1, 4):
+					pygame.draw.line(window, (255, 0, 0), (x + cam.position_x, MainPlayer.position_y * frame_size + cam.position_y), (x + cam.position_x, (MainPlayer.position_y + 1) * frame_size + cam.position_y), 1)
+				for y in range(MainPlayer.position_y * frame_size, (MainPlayer.position_y + 1) * frame_size + 1, 4):
+					pygame.draw.line(window, (255, 0, 0), (MainPlayer.position_x * frame_size + cam.position_x, y + cam.position_y), ((MainPlayer.position_x + 1) * frame_size  + cam.position_x, y + cam.position_y), 1)
 			if (debug_draw_frame == True):	
 				for x in range(0, nbr_frame_x * frame_size, frame_size):
 					pygame.draw.line(window, (255, 255, 255), (x, 0), (x, nbr_frame_y * frame_size), 1)
 				for y in range(0, nbr_frame_y * frame_size, frame_size):
 					pygame.draw.line(window, (255, 255, 255), (0, y), (nbr_frame_x * frame_size, y), 1)
-				
+			if (debug_draw_position == True): #and debug_draw_position_refresh == True):
+				myfont = pygame.font.SysFont("Arial", 12)
+				debug_to_draw = "PX:" + str(MainPlayer.position_x) + " PY:" + str(MainPlayer.position_y) + "  CX:" + str(cam.position_x) + " CY:" + str(cam.position_y)
+				label = myfont.render(debug_to_draw, 1, (255,255,255))
+				pygame.draw.rect(window, (0,0,0), pygame.Rect(0, 0, len(debug_to_draw) * 6 + 2, 15))
+				window.blit(label, (1, 1))
+				debug_draw_position_refresh = False
+			
+			
 			pygame.display.flip()

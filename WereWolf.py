@@ -3,12 +3,12 @@
 import FrostpyteEngine as fpe
 from Constantes import *
 
-fpe.init(frame_size * nbr_frame_x, frame_size * nbr_frame_y, fpe.Player("Gauthier", "./Sprites/Characters/Pirate", 0, 2), window_name, window_icon, frame_rate)
+fpe.init(frame_size * nbr_frame_x, frame_size * nbr_frame_y, fpe.Player("Gauthier", "./Sprites/Characters/Pirate", 10, 7, speed=4), window_name, window_icon, frame_rate)
 
 main_thread = fpe.MainRun()
 main_thread.start()
 
-Herbe = fpe.Tileset("./Sprites/Tilesets/Herbe", 0, 0, 20, 15)
+Herbe = fpe.Tileset("./Sprites/Tilesets/Herbe", -10, -10, 20, 20)
 fpe.drawTileset(Herbe)
 
 Pirate2 = fpe.Sprite("./Sprites/Characters/Pirate", 5, 5)
